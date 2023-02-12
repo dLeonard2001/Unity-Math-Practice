@@ -47,6 +47,12 @@ public class UnitController : MonoBehaviour
         Gizmos.color = Color.blue;
         Gizmos.DrawLine(center.position, new Vector3(Mathf.Cos(0), 0f, 0f) * 5f);
 
+        if(Application.isPlaying)
+            LogDotProduct();
+    }
+
+    private void LogDotProduct()
+    {
         // dot product in unity  can return -1, 0, 1
             // if -1
                 // the vectors are facing away from each other
@@ -61,7 +67,7 @@ public class UnitController : MonoBehaviour
         Debug.Log($"Dot Product: {dotProduct}");
         
         // to get the angle of our dot product
-            // multiple the arc-cosine of our dot product BY 180/pi
+        // multiple the arc-cosine of our dot product BY 180/pi
         Debug.Log($"Angle of our dot product: {Mathf.Acos(dotProduct) * Mathf.Rad2Deg}");
     }
 }
