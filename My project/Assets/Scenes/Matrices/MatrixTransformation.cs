@@ -1,75 +1,210 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class MatrixTransformation : MonoBehaviour
 {
+    [SerializeField] private Animator _animator;
     [SerializeField] private Transform _transform;
-    [SerializeField] private Vector3 t_Vector3;
-    private bool isResetting;
+    [SerializeField] private Transform targetTransform;
+    [SerializeField] private float moveDuration = 1.0f;
+    [SerializeField] private float resetDuration = 1.0f;
+    private Vector3 t_Vector3;
+
+    private float moveElapsedTime;
+    private float resetElapsedTime;
     private Vector3 startPos;
     private Matrix4x4 newMatrix;
     
-    // translation for a matrix4x4
-    // where {tx, ty, tz} are our elements to change in our matrix4x4
-        // | 1  0  0  tx |
-        // | 0  1  0  ty |
-        // | 0  0  1  tz |
-        // | 0  0  0  1  |
-    
+    // ===================================== NOTES =====================================
+        // General order for matrix transformations are
+            // 1. scaling
+            // 2. rotations
+            // 3. translation
+            // there is a specific order because
+            // the order in which the transformations are done can affect the result
+    // ===================================== NOTES =====================================
     
     // cache some data for later
     void Start()
     {
         _transform = GetComponent<Transform>();
+        
         startPos = _transform.position;
-        
+
         newMatrix = _transform.localToWorldMatrix;
+        
+        transform.rotation *= makeRotationZ(45f);
+        transform.rotation *= makeRotationY(45f);
+        transform.rotation *= makeRotationX(45f);
     }
 
-    // translate our object, if we aren't resetting the object
-    void Update()
+    private IEnumerator BeginTranslation()
     {
-        if (Input.GetKeyDown(KeyCode.R) && !isResetting)
-            StartCoroutine(ResetPosition());
-        
-        if (!isResetting)
+        moveElapsedTime = 0;
+
+        while (_transform.position != t_Vector3)
         {
-            Translate(t_Vector3.x, t_Vector3.y, t_Vector3.z);
-
-            _transform.position += newMatrix.MultiplyPoint3x4(Vector3.zero);
-        }
-
-        // Debug.Log($"Delta Time: {Time.deltaTime}");
-        // Debug.Log($"FixedDelta Time: {Time.fixedDeltaTime}");
-        
-    }
-
-    // need to finish
-    IEnumerator ResetPosition()
-    {
-        isResetting = true;
-        Vector3 currentPos = _transform.position;
-        Vector3 moveDirection = startPos - currentPos;
-        
-        Debug.Log(moveDirection);
-        
-        Debug.Break();
-        
-        while (_transform.position != startPos)
-        {
-            
+            Translate(t_Vector3);
             
             yield return null;
         }
 
-        isResetting = false;
     }
     
-    private void Translate(float x, float y, float z)
+    private IEnumerator BeginReset()
     {
-        newMatrix.m03 = x * Time.deltaTime;
-        newMatrix.m13 = y * Time.deltaTime;
-        newMatrix.m23 = z * Time.deltaTime;
+        resetElapsedTime = 0;
+
+        while (_transform.position != startPos)
+        {
+            ResetPosition();
+            // ResetRotation();
+            // ResetScale()
+
+            yield return null;
+        }
+        
     }
+
+    // translation for a matrix4x4
+        // where {tx, ty, tz} are our elements to change in our matrix4x4
+            // | 1  0  0  tx |
+            // | 0  1  0  ty |
+            // | 0  0  1  tz |
+            // | 0  0  0  1  |
+            
+    // we perform translation this way because m03, m13, m23 are the x y z coordinates in world space
+        // and m33 represents a scaling factor
+    
+    // translation transformation
+    private void Translate(Vector3 direction)
+    {
+        moveElapsedTime += 0.5f * Time.deltaTime;
+        float t = moveElapsedTime / moveDuration;
+
+        newMatrix.m03 = Mathf.Lerp(_transform.position.x, direction.x, Mathf.SmoothStep(0, 1, t));
+        newMatrix.m13 = Mathf.Lerp(_transform.position.y, direction.y, Mathf.SmoothStep(0, 1, t));
+        newMatrix.m23 = Mathf.Lerp(_transform.position.z, direction.z, Mathf.SmoothStep(0, 1, t));
+        
+        _transform.position = newMatrix.MultiplyPoint3x4(Vector3.zero);
+    }
+    
+    #region MakeRotation
+    
+    // here is how we rotate a matrix on the x-axis
+        // | 1    0           0           0 |
+        // | 0    cos(theta)    -sin(theta)   0 |
+        // | 0    sin(theta)    cos(theta)    0 |
+        // | 0    0           0           1 |
+    // WHEN ROTATING YOU MUST APPLY A SPECIFIC ORDER
+    // apply the x then y then z
+    // if you don't apply rotations in this order, you will get different results than you think
+
+    private Quaternion makeRotationX(float degrees)
+    {
+        float s = Mathf.Sin(degrees * Time.deltaTime);
+        float c = Mathf.Cos(degrees * Time.deltaTime);
+        Matrix4x4 matrix = Matrix4x4.identity;
+        
+        matrix.m11 = c;
+        matrix.m12 = -s;
+        matrix.m21 = s;
+        matrix.m22 = c;
+        
+        return Quaternion.LookRotation(matrix.GetColumn(2), matrix.GetColumn(1));
+    }
+    
+    // here is how we rotate a matrix on the y-axis
+        // | cos(theta)   0   sin(theta)   0 |
+        // | 0            1   0              0 |
+        // | -sin(theta)  0   cos(theta)   0 |
+        // | 0            0   0              1 |
+    private Quaternion makeRotationY(float degrees)
+    {
+        float s = Mathf.Sin(degrees * Time.deltaTime);
+        float c = Mathf.Cos(degrees * Time.deltaTime);
+        Matrix4x4 matrix = Matrix4x4.identity;
+
+        matrix.m00 = c;
+        matrix.m02 = s;
+        matrix.m20 = -s;
+        matrix.m22 = c;
+        
+        return Quaternion.LookRotation(matrix.GetColumn(2), matrix.GetColumn(1));
+    }
+    
+    // here is how we rotate a matrix on the z-axis
+        // | cos(theta) -sin(theta)  0   0 |
+        // | sin(theta)  cos(theta)  0   0 |
+        // | 0            0           1   0 |
+        // | 0            0           0   1 |
+    private Quaternion makeRotationZ(float degrees)
+    {
+        float s = Mathf.Sin(degrees * Time.deltaTime);
+        float c = Mathf.Cos(degrees * Time.deltaTime);
+        Matrix4x4 matrix = Matrix4x4.identity;
+
+        matrix.m00 = c;
+        matrix.m01 = -s;
+        matrix.m10 = s;
+        matrix.m12 = c;
+
+        return Quaternion.LookRotation(matrix.GetColumn(2), matrix.GetColumn(1));
+    }
+
+
+    #endregion
+    
+
+    // reset our object to its original form
+        // the scope to also add in ResetRotation and ResetScale
+    private void ResetPosition()
+    {
+        resetElapsedTime += 0.5f * Time.deltaTime;
+        float t = resetElapsedTime / resetDuration;
+
+        newMatrix.m03 = Mathf.Lerp(_transform.position.x, startPos.x, Mathf.SmoothStep(0, 1, t));
+        newMatrix.m13 = Mathf.Lerp(_transform.position.y, startPos.y, Mathf.SmoothStep(0, 1, t));
+        newMatrix.m23 = Mathf.Lerp(_transform.position.z, startPos.z, Mathf.SmoothStep(0, 1, t));
+
+        _transform.position = newMatrix.MultiplyPoint3x4(Vector3.zero);
+    }
+
+    public void Reset()
+    {
+        StopAllCoroutines();
+        StartCoroutine(BeginReset());
+    }
+
+    public void Move()
+    {
+        StopAllCoroutines();
+        StartCoroutine(BeginTranslation());
+    }
+
+    #region HandlePlayerInput
+
+    public void SetX(TMP_InputField info)
+    {
+        
+        t_Vector3.x = float.Parse(info.text);
+    }
+    
+    public void SetY(TMP_InputField info)
+    {
+        
+        t_Vector3.y = float.Parse(info.text);
+    }
+    
+    public void SetZ(TMP_InputField info)
+    {
+        
+        t_Vector3.z = float.Parse(info.text);
+    }
+
+    #endregion
 }
