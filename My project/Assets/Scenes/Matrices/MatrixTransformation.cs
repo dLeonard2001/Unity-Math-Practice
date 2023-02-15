@@ -58,6 +58,20 @@ public class MatrixTransformation : MonoBehaviour
         _transform.rotation = Quaternion.LookRotation(newMatrix.GetColumn(2), newMatrix.GetColumn(1));
         _transform.position = newMatrix.MultiplyPoint3x4(Vector3.zero);
     }
+
+    public void Translate()
+    {
+        newMatrix = _transform.localToWorldMatrix;
+
+        _transform.position = newMatrix.MultiplyPoint3x4(Vector3.zero);
+    }
+
+    public void Rotate()
+    {
+        newMatrix = _transform.localToWorldMatrix;
+        
+        
+    }
     
     #region MakeRotation
     
@@ -145,34 +159,7 @@ public class MatrixTransformation : MonoBehaviour
         }
 
         #endregion
-    
-    private IEnumerator BeginTranslation(Matrix4x4 m)
-    {
-        moveElapsedTime = 0;
-
-        while (_transform.position != t_Vector3)
-        {
-            m *= Translate(t_Vector3);
-            
-            yield return null;
-        }
-
-    }
-    
-    private IEnumerator BeginReset()
-    {
-        resetElapsedTime = 0;
-
-        while (_transform.position != startPos)
-        {
-            ResetPosition();
-            // ResetRotation();
-            // ResetScale()
-
-            yield return null;
-        }
         
-    }
 
     // translation for a matrix4x4
         // where {tx, ty, tz} are our elements to change in our matrix4x4
@@ -211,18 +198,7 @@ public class MatrixTransformation : MonoBehaviour
 
         _transform.position = newMatrix.MultiplyPoint3x4(Vector3.zero);
     }
-
-    public void Reset()
-    {
-        StopAllCoroutines();
-        StartCoroutine(BeginReset());
-    }
-
-    public void Move()
-    {
-        StopAllCoroutines();
-       // StartCoroutine(BeginTranslation());
-    }
+    
 
     
 }
