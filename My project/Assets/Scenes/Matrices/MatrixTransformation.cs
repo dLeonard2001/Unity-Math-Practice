@@ -13,6 +13,10 @@ public class MatrixTransformation : MonoBehaviour
     [SerializeField] private float moveDuration = 1.0f;
     [SerializeField] private float resetDuration = 1.0f;
     private Vector3 t_Vector3;
+    private Quaternion xRotation;
+    private Quaternion yRotation;
+    private Quaternion zRotation;
+    
 
     private float moveElapsedTime;
     private float resetElapsedTime;
@@ -35,13 +39,86 @@ public class MatrixTransformation : MonoBehaviour
         
         startPos = _transform.position;
 
-        newMatrix = _transform.localToWorldMatrix;
         
-        transform.rotation *= makeRotationZ(45f);
-        transform.rotation *= makeRotationY(45f);
-        transform.rotation *= makeRotationX(45f);
     }
 
+    public void Execute()
+    {
+        newMatrix = _transform.localToWorldMatrix;
+        
+        newMatrix *= makeRotationZ(45f);
+        newMatrix *= makeRotationY(45f);
+        newMatrix *= makeRotationX(45f);
+        
+
+        _transform.rotation = Quaternion.LookRotation(newMatrix.GetColumn(2), newMatrix.GetColumn(1));
+    }
+    
+    #region MakeRotation
+    
+    // here is how we rotate a matrix on the x-axis
+        // | 1    0           0           0 |
+        // | 0    cos(theta)    -sin(theta)   0 |
+        // | 0    sin(theta)    cos(theta)    0 |
+        // | 0    0           0           1 |
+    // WHEN ROTATING YOU MUST APPLY A SPECIFIC ORDER
+    // apply the x then y then z
+    // if you don't apply rotations in this order, you will get different results than you think
+
+    private Matrix4x4 makeRotationX(float degrees)
+    {
+        float s = Mathf.Sin(degrees * Mathf.Deg2Rad);
+        float c = Mathf.Cos(degrees * Mathf.Deg2Rad);
+        Matrix4x4 matrix = Matrix4x4.identity;
+        
+        matrix.m11 = c;
+        matrix.m12 = -s;
+        matrix.m21 = s;
+        matrix.m22 = c;
+
+        return matrix;
+    }
+    
+    // here is how we rotate a matrix on the y-axis
+        // | cos(theta)   0   sin(theta)   0 |
+        // | 0            1   0              0 |
+        // | -sin(theta)  0   cos(theta)   0 |
+        // | 0            0   0              1 |
+    private Matrix4x4 makeRotationY(float degrees)
+    {
+        float s = Mathf.Sin(degrees * Mathf.Deg2Rad);
+        float c = Mathf.Cos(degrees * Mathf.Deg2Rad);
+        Matrix4x4 matrix = Matrix4x4.identity;
+
+        matrix.m00 = c;
+        matrix.m02 = s;
+        matrix.m20 = -s;
+        matrix.m22 = c;
+
+        return matrix;
+    }
+    
+    // here is how we rotate a matrix on the z-axis
+        // | cos(theta) -sin(theta)  0   0 |
+        // | sin(theta)  cos(theta)  0   0 |
+        // | 0           0           1   0 |
+        // | 0           0           0   1 |
+        private Matrix4x4 makeRotationZ(float degrees)
+        {
+            float s = Mathf.Sin(degrees * Mathf.Deg2Rad);
+            float c = Mathf.Cos(degrees * Mathf.Deg2Rad);
+            Matrix4x4 matrix = Matrix4x4.identity;
+
+            matrix.m00 = c;
+            matrix.m01 = -s;
+            matrix.m10 = s;
+            matrix.m12 = c;
+
+            return matrix;
+        }
+
+        #endregion
+    
     private IEnumerator BeginTranslation()
     {
         moveElapsedTime = 0;
@@ -85,81 +162,16 @@ public class MatrixTransformation : MonoBehaviour
     {
         moveElapsedTime += 0.5f * Time.deltaTime;
         float t = moveElapsedTime / moveDuration;
+        newMatrix = transform.worldToLocalMatrix;
 
         newMatrix.m03 = Mathf.Lerp(_transform.position.x, direction.x, Mathf.SmoothStep(0, 1, t));
         newMatrix.m13 = Mathf.Lerp(_transform.position.y, direction.y, Mathf.SmoothStep(0, 1, t));
         newMatrix.m23 = Mathf.Lerp(_transform.position.z, direction.z, Mathf.SmoothStep(0, 1, t));
-        
+
+        Debug.Log(newMatrix.MultiplyPoint3x4(Vector3.zero));
         _transform.position = newMatrix.MultiplyPoint3x4(Vector3.zero);
     }
     
-    #region MakeRotation
-    
-    // here is how we rotate a matrix on the x-axis
-        // | 1    0           0           0 |
-        // | 0    cos(theta)    -sin(theta)   0 |
-        // | 0    sin(theta)    cos(theta)    0 |
-        // | 0    0           0           1 |
-    // WHEN ROTATING YOU MUST APPLY A SPECIFIC ORDER
-    // apply the x then y then z
-    // if you don't apply rotations in this order, you will get different results than you think
-
-    private Quaternion makeRotationX(float degrees)
-    {
-        float s = Mathf.Sin(degrees * Time.deltaTime);
-        float c = Mathf.Cos(degrees * Time.deltaTime);
-        Matrix4x4 matrix = Matrix4x4.identity;
-        
-        matrix.m11 = c;
-        matrix.m12 = -s;
-        matrix.m21 = s;
-        matrix.m22 = c;
-        
-        return Quaternion.LookRotation(matrix.GetColumn(2), matrix.GetColumn(1));
-    }
-    
-    // here is how we rotate a matrix on the y-axis
-        // | cos(theta)   0   sin(theta)   0 |
-        // | 0            1   0              0 |
-        // | -sin(theta)  0   cos(theta)   0 |
-        // | 0            0   0              1 |
-    private Quaternion makeRotationY(float degrees)
-    {
-        float s = Mathf.Sin(degrees * Time.deltaTime);
-        float c = Mathf.Cos(degrees * Time.deltaTime);
-        Matrix4x4 matrix = Matrix4x4.identity;
-
-        matrix.m00 = c;
-        matrix.m02 = s;
-        matrix.m20 = -s;
-        matrix.m22 = c;
-        
-        return Quaternion.LookRotation(matrix.GetColumn(2), matrix.GetColumn(1));
-    }
-    
-    // here is how we rotate a matrix on the z-axis
-        // | cos(theta) -sin(theta)  0   0 |
-        // | sin(theta)  cos(theta)  0   0 |
-        // | 0            0           1   0 |
-        // | 0            0           0   1 |
-    private Quaternion makeRotationZ(float degrees)
-    {
-        float s = Mathf.Sin(degrees * Time.deltaTime);
-        float c = Mathf.Cos(degrees * Time.deltaTime);
-        Matrix4x4 matrix = Matrix4x4.identity;
-
-        matrix.m00 = c;
-        matrix.m01 = -s;
-        matrix.m10 = s;
-        matrix.m12 = c;
-
-        return Quaternion.LookRotation(matrix.GetColumn(2), matrix.GetColumn(1));
-    }
-
-
-    #endregion
-    
-
     // reset our object to its original form
         // the scope to also add in ResetRotation and ResetScale
     private void ResetPosition()
