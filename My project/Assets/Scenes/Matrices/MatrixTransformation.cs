@@ -1,9 +1,13 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Numerics;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using Matrix4x4 = UnityEngine.Matrix4x4;
+using Quaternion = UnityEngine.Quaternion;
+using Vector3 = UnityEngine.Vector3;
 
 public class MatrixTransformation : MonoBehaviour
 {
@@ -46,12 +50,13 @@ public class MatrixTransformation : MonoBehaviour
     {
         newMatrix = _transform.localToWorldMatrix;
         
-        newMatrix *= makeRotationZ(45f);
+        //newMatrix *= makeRotationZ(45f);
         newMatrix *= makeRotationY(45f);
-        newMatrix *= makeRotationX(45f);
-        
+        //newMatrix *= makeRotationX(45f);
+        newMatrix *= Translate(t_Vector3);
 
         _transform.rotation = Quaternion.LookRotation(newMatrix.GetColumn(2), newMatrix.GetColumn(1));
+        _transform.position = newMatrix.MultiplyPoint3x4(Vector3.zero);
     }
     
     #region MakeRotation
@@ -118,14 +123,36 @@ public class MatrixTransformation : MonoBehaviour
         }
 
         #endregion
+        
+    #region HandlePlayerInput
+
+        public void SetX(TMP_InputField info)
+        {
+        
+            t_Vector3.x = float.Parse(info.text);
+        }
     
-    private IEnumerator BeginTranslation()
+        public void SetY(TMP_InputField info)
+        {
+        
+            t_Vector3.y = float.Parse(info.text);
+        }
+    
+        public void SetZ(TMP_InputField info)
+        {
+        
+            t_Vector3.z = float.Parse(info.text);
+        }
+
+        #endregion
+    
+    private IEnumerator BeginTranslation(Matrix4x4 m)
     {
         moveElapsedTime = 0;
 
         while (_transform.position != t_Vector3)
         {
-            Translate(t_Vector3);
+            m *= Translate(t_Vector3);
             
             yield return null;
         }
@@ -158,18 +185,17 @@ public class MatrixTransformation : MonoBehaviour
         // and m33 represents a scaling factor
     
     // translation transformation
-    private void Translate(Vector3 direction)
+    private Matrix4x4 Translate(Vector3 direction)
     {
         moveElapsedTime += 0.5f * Time.deltaTime;
         float t = moveElapsedTime / moveDuration;
-        newMatrix = transform.worldToLocalMatrix;
+        Matrix4x4 m = Matrix4x4.identity;
 
-        newMatrix.m03 = Mathf.Lerp(_transform.position.x, direction.x, Mathf.SmoothStep(0, 1, t));
-        newMatrix.m13 = Mathf.Lerp(_transform.position.y, direction.y, Mathf.SmoothStep(0, 1, t));
-        newMatrix.m23 = Mathf.Lerp(_transform.position.z, direction.z, Mathf.SmoothStep(0, 1, t));
+        m.m03 = direction.x;
+        m.m13 = direction.y;
+        m.m23 = direction.z;
 
-        Debug.Log(newMatrix.MultiplyPoint3x4(Vector3.zero));
-        _transform.position = newMatrix.MultiplyPoint3x4(Vector3.zero);
+        return m;
     }
     
     // reset our object to its original form
@@ -195,28 +221,8 @@ public class MatrixTransformation : MonoBehaviour
     public void Move()
     {
         StopAllCoroutines();
-        StartCoroutine(BeginTranslation());
+       // StartCoroutine(BeginTranslation());
     }
 
-    #region HandlePlayerInput
-
-    public void SetX(TMP_InputField info)
-    {
-        
-        t_Vector3.x = float.Parse(info.text);
-    }
     
-    public void SetY(TMP_InputField info)
-    {
-        
-        t_Vector3.y = float.Parse(info.text);
-    }
-    
-    public void SetZ(TMP_InputField info)
-    {
-        
-        t_Vector3.z = float.Parse(info.text);
-    }
-
-    #endregion
 }
