@@ -14,12 +14,11 @@ public class MatrixTransformation : MonoBehaviour
     [SerializeField] private Animator _animator;
     [SerializeField] private Transform _transform;
     [SerializeField] private Transform targetTransform;
-    // [SerializeField] private float moveDuration = 1.0f;
-    // [SerializeField] private float resetDuration = 1.0f;
+    [SerializeField] private float actionDuration = 1.0f;
     private Vector3 translationVector;
     private Vector3 scaleVector;
     private Vector3 originalScale;
-    
+
     private Matrix4x4 newMatrix;
 
     private bool cr_active;
@@ -37,7 +36,8 @@ public class MatrixTransformation : MonoBehaviour
     void Start()
     {
         _transform = GetComponent<Transform>();
-        
+
+        scaleVector = Vector3.one;
         originalScale = _transform.localScale;
     }
 
@@ -67,12 +67,15 @@ public class MatrixTransformation : MonoBehaviour
         {
             SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex + 1);
         }
-        
+
+        cr_active = false;
     }
     
     // reset our player's transformations to the beginning of the level
     public void ResetPlayer()
     {
+        StopAllCoroutines();
+        
         newMatrix = Matrix4x4.identity;
 
         _transform.localScale = originalScale;
@@ -81,43 +84,69 @@ public class MatrixTransformation : MonoBehaviour
     }
     
     // functions to smoothly interpolate the player's input
-    // private IEnumerator SmoothScale()
-    // {
-    //     while (_transform.localScale != scaleVector)
-    //     {
-    //         
-    //     }
-    //
-    //     StartCoroutine(SmoothRotate());
-    // }
-    //
-    // private IEnumerator SmoothRotate()
-    // {
-    //
-    //     StartCoroutine(SmoothTranslate());
-    // }
-    //
-    //
-    // private IEnumerator SmoothTranslate()
-    // {
-    //     
-    //     
-    //     // re-enable execute btn;
-    // }
+    private IEnumerator SmoothScale(Vector3 scaleVector)
+    {
+        float resetDuration = 0f;
+        newMatrix = _transform.localToWorldMatrix;
+
+        Matrix4x4 m = newMatrix * Scale(scaleVector);
+        Vector3 newScaleVector = m.lossyScale;
+
+        float t = resetDuration / actionDuration;
+        while (_transform.localScale != m.lossyScale)
+        {
+            _transform.localScale = new Vector3(Mathf.Lerp(_transform.localScale.x, newScaleVector.x, t),
+                _transform.localScale.y, _transform.localScale.z);
+            
+            _transform.localScale = new Vector3(_transform.localScale.x,
+                Mathf.Lerp(_transform.localScale.y, newScaleVector.y, t), _transform.localScale.z);
+            
+            _transform.localScale = new Vector3(_transform.localScale.x,
+                _transform.localScale.y, Mathf.Lerp(_transform.localScale.z, newScaleVector.z, t));
+
+            resetDuration += 0.1f * Time.deltaTime;
+            t = resetDuration / actionDuration;
+
+            yield return null;
+        }
+    }
+
+    private IEnumerator SmoothTranslate(Vector3 translateVector)
+    {
+        float resetDuration = 0f;
+        newMatrix = _transform.localToWorldMatrix;
+
+        Matrix4x4 m = newMatrix * Translate(translateVector);
+        Vector3 newPositionVec = m.GetPosition();
+
+        float t = resetDuration / actionDuration;
+        while (_transform.position != translateVector)
+        {
+            _transform.position = new Vector3(Mathf.Lerp(_transform.position.x, newPositionVec.x, t),
+                _transform.position.y, _transform.position.z);
+            
+            _transform.position = new Vector3(_transform.position.x,
+                Mathf.Lerp(_transform.position.y, newPositionVec.y, t), _transform.position.z);
+            
+            _transform.position = new Vector3(_transform.position.x,
+                _transform.position.y, Mathf.Lerp(_transform.position.z, newPositionVec.z, t));
+            
+            
+            resetDuration += 0.1f * Time.deltaTime;
+            t = resetDuration / actionDuration;
+
+            yield return null;
+        }
+        
+    }
 
     #region OrderOfOperations
     
     // apply our scale input
-    public void ApplyScale(Button btn)
+    public void ApplyScale()
     {
-        newMatrix = _transform.localToWorldMatrix;
-
-        if (scaleVector == Vector3.zero)
-            scaleVector = Vector3.one;
-
-        newMatrix *= Scale(scaleVector);
-
-        _transform.localScale = newMatrix.lossyScale;
+        StopAllCoroutines();
+        StartCoroutine(SmoothScale(scaleVector));
     }
 
     // apply x rotation input
@@ -156,10 +185,7 @@ public class MatrixTransformation : MonoBehaviour
     // apply translation input
     public void ApplyTranslation()
     {
-        newMatrix = _transform.localToWorldMatrix;
-
-        newMatrix *= Translate(translationVector);
-        _transform.position = newMatrix.GetPosition();
+        StartCoroutine(SmoothTranslate(translationVector));
     }
     
     #endregion
@@ -276,7 +302,6 @@ public class MatrixTransformation : MonoBehaviour
 
     #endregion
     
-
     #region makeTranslationTransformation
 
     // translation for a matrix4x4

@@ -2889,8 +2889,7 @@ MonoBehaviour:
   _animator: {fileID: 338440919}
   _transform: {fileID: 275469366}
   targetTransform: {fileID: 1761607729}
-  moveDuration: 10
-  resetDuration: 10
+  actionDuration: 15
 --- !u!65 &275469363
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -9526,7 +9525,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1761607725}
   m_LocalRotation: {x: 0, y: -0.38268343, z: 0, w: 0.92387956}
-  m_LocalPosition: {x: 5, y: 0, z: 6}
+  m_LocalPosition: {x: 6, y: 0, z: 6}
   m_LocalScale: {x: 1, y: 1, z: 3}
   m_ConstrainProportionsScale: 0
   m_Children: []
