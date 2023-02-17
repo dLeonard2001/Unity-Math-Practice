@@ -4,5 +4,14 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/Scenes/Matrices/Matrix_level_1.unity
+    guid: 59987ce78279a4a4ca725cc721de687e
+  - enabled: 1
+    path: Assets/Scenes/Matrices/Matrix_level_2.unity
+    guid: 689e14d238aa9d544a1b57358a5541d5
+  - enabled: 1
+    path: Assets/Scenes/Matrices/Matrix_level_3.unity
+    guid: f4824844348d857429af85eb5af95f99
   m_configObjects: {}
